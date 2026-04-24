@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sir Mean AI Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --royal: #0a0a12;
+      --royal2: #10101e;
+      --royal3: #161628;
+      --royal4: #1e1e35;
+      --accent: #7c6af7;
+      --accent2: #a99ef9;
+      --gold: #e2b96f;
+      --gold2: #f5d499;
+      --text: #eeeaf8;
+      --muted: #6b6880;
+      --muted2: #9b97ae;
+      --border: rgba(124,106,247,0.15);
+      --glow: rgba(124,106,247,0.25);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--royal);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.10; animation: drift 14s ease-in-out infinite alternate; }
+    .orb1 { width: 420px; height: 420px; background: #7c6af7; top: -120px; left: -120px; }
+    .orb2 { width: 320px; height: 320px; background: #e2b96f; bottom: -100px; right: -100px; animation-delay: 4s; }
+    .orb3 { width: 220px; height: 220px; background: #f76ab4; top: 45%; left: 55%; animation-delay: 8s; }
+    @keyframes drift {
+      from { transform: translate(0,0) scale(1); }
+      to { transform: translate(25px,18px) scale(1.08); }
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 1; opacity: 0.5;
+    }
+    .app { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100vh; }
+
+    /* HEADER */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+      background: rgba(10,10,18,0.88);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 13px; }
+    .avatar-wrap { position: relative; }
+    .avatar {
+      width: 46px; height: 46px; border-radius: 13px;
+      background: linear-gradient(135deg, #7c6af7, #4a3bc7);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px; font-weight: 700; color: white; letter-spacing: 1px;
+      box-shadow: 0 0 28px var(--glow), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .status-ring {
+      position: absolute; bottom: -2px; right: -2px;
+      width: 13px; height: 13px; border-radius: 50%;
+      background: #3ecf8e; border: 2px solid var(--royal);
+      animation: pulseG 2.5s ease-in-out infinite;
+    }
+    @keyframes pulseG {
+      0%,100% { box-shadow: 0 0 0 0 rgba(62,207,142,0.4); }
+      50% { box-shadow: 0 0 0 5px rgba(62,207,142,0); }
+    }
+    .header-info .name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.2;
+    }
+    .header-info .name span { color: var(--accent2); }
+    .header-info .tagline { font-size: 11px; color: var(--muted2); margin-top: 2px; font-weight: 300; }
+    .header-badges { display: flex; gap: 7px; }
+    .badge {
+      padding: 4px 11px; border-radius: 50px;
+      font-size: 10.5px; font-weight: 500; border: 1px solid;
+    }
+    .badge.online { background: rgba(62,207,142,0.08); border-color: rgba(62,207,142,0.25); color: #3ecf8e; }
+    .badge.bi { background: rgba(226,185,111,0.08); border-color: rgba(226,185,111,0.25); color: var(--gold); }
+    #homeBtn {
+      display: none; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(124,106,247,0.12); border: 1px solid rgba(124,106,247,0.3);
+      color: var(--accent2); cursor: pointer; transition: all 0.2s; margin-left: 2px;
+    }
+    #homeBtn:hover { background: rgba(124,106,247,0.25); border-color: var(--accent); color: white; }
+    #homeBtn.visible { display: flex; }
+
+    /* CHAT */
+    #chat {
+      flex: 1; overflow-y: auto;
+      padding: 22px 18px; display: flex;
+      flex-direction: column; gap: 18px;
+      scroll-behavior: smooth;
+    }
+    #chat::-webkit-scrollbar { width: 4px; }
+    #chat::-webkit-scrollbar-thumb { background: var(--royal4); border-radius: 10px; }
+
+    /* WELCOME */
+    .welcome {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; padding: 24px 12px 8px;
+      animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) both;
+    }
+    .welcome-icon {
+      width: 74px; height: 74px; border-radius: 22px;
+      background: linear-gradient(135deg, var(--accent), #4a3bc7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px; margin-bottom: 18px;
+      box-shadow: 0 8px 36px var(--glow), inset 0 1px 0 rgba(255,255,255,0.15);
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
+    .welcome h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 7px;
+    }
+    .welcome h2 em { color: var(--accent2); font-style: normal; }
+    .welcome .subtitle { font-size: 13px; color: var(--muted2); max-width: 320px; line-height: 1.7; margin-bottom: 6px; font-weight: 300; }
+    .welcome .hausa { font-size: 12px; color: var(--gold); margin-bottom: 22px; font-style: italic; }
+
+    .topic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; width: 100%; max-width: 460px; margin-bottom: 16px; }
+    .topic-card {
+      background: var(--royal3); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 13px 15px;
+      text-align: left; cursor: pointer; transition: all 0.22s;
+      position: relative; overflow: hidden;
+    }
+    .topic-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--accent), transparent);
+      opacity: 0; transition: opacity 0.22s;
+    }
+    .topic-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .topic-card:hover::before { opacity: 0.07; }
+    .topic-icon { font-size: 20px; margin-bottom: 5px; display: block; }
+    .topic-title { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .topic-desc { font-size: 10.5px; color: var(--muted2); line-height: 1.4; font-weight: 300; }
+
+    .divider { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; }
+    .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .divider span { font-size: 11px; color: var(--muted); }
+
+    .quick-prompts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 460px; margin-top: 14px; }
+    .qbtn {
+      background: rgba(124,106,247,0.07); border: 1px solid rgba(124,106,247,0.2);
+      color: var(--accent2); padding: 6px 13px; border-radius: 50px;
+      font-size: 11.5px; font-family: 'Outfit', sans-serif;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .qbtn:hover { background: rgba(124,106,247,0.18); border-color: var(--accent); color: white; }
+
+    /* MESSAGES */
+    .message {
+      display: flex; gap: 11px;
+      animation: fadeUp 0.32s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .message.user { align-self: flex-end; flex-direction: row-reverse; max-width: 80%; }
+    .message.assistant { align-self: flex-start; max-width: 84%; }
+    .msg-avatar {
+      width: 34px; height: 34px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 18px;
+    }
+    .message.assistant .msg-avatar {
+      background: linear-gradient(135deg, var(--accent), #4a3bc7);
+      color: white; font-family: 'Cormorant Garamond', serif;
+      font-size: 15px; box-shadow: 0 3px 12px var(--glow);
+    }
+    .message.user .msg-avatar {
+      background: var(--royal4); color: var(--muted2);
+      font-size: 17px; border: 1px solid var(--border);
+    }
+    .msg-col { display: flex; flex-direction: column; gap: 4px; }
+    .msg-label { font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: 0.3px; }
+    .message.user .msg-label { text-align: right; color: rgba(255,255,255,0.35); }
+    .bubble {
+      padding: 12px 17px; border-radius: var(--radius-md);
+      font-size: 14px; line-height: 1.7;
+      word-wrap: break-word; white-space: pre-wrap;
+    }
+    .message.assistant .bubble {
+      background: var(--royal3); border: 1px solid var(--border);
+      border-bottom-left-radius: 4px; color: var(--text);
+    }
+    .message.user .bubble {
+      background: linear-gradient(135deg, #5a4bd1, var(--accent));
+      color: white; border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 18px rgba(124,106,247,0.28);
+    }
+
+    /* TYPING */
+    .typing-bubble {
+      background: var(--royal3); border: 1px solid var(--border);
+      border-radius: var(--radius-md); border-bottom-left-radius: 4px;
+      padding: 14px 18px; display: flex; gap: 5px; align-items: center;
+    }
+    .typing-bubble span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); animation: tb 1.3s ease-in-out infinite;
+    }
+    .typing-bubble span:nth-child(2){animation-delay:.18s;background:var(--accent2)}
+    .typing-bubble span:nth-child(3){animation-delay:.36s;background:var(--gold)}
+    @keyframes tb{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-7px);opacity:1}}
+
+    /* INPUT */
+    .input-wrap {
+      padding: 13px 18px 16px;
+      background: rgba(10,10,18,0.92);
+      backdrop-filter: blur(24px);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .input-row {
+      display: flex; gap: 10px; align-items: flex-end;
+      background: var(--royal3); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 9px 9px 9px 17px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-row:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,106,247,0.1); }
+    #userInput {
+      flex: 1; background: transparent; border: none;
+      font-size: 14px; font-family: 'Outfit', sans-serif;
+      color: var(--text); resize: none; outline: none;
+      max-height: 110px; overflow-y: auto; line-height: 1.55; padding: 4px 0;
+    }
+    #userInput::placeholder { color: var(--muted); }
+    #sendBtn {
+      width: 40px; height: 40px; border-radius: 11px;
+      background: linear-gradient(135deg, var(--accent), #4a3bc7);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.2s;
+      box-shadow: 0 4px 14px var(--glow);
+    }
+    #sendBtn:hover { transform: scale(1.07); box-shadow: 0 6px 20px var(--glow); }
+    #sendBtn:active { transform: scale(0.94); }
+    #sendBtn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+    #sendBtn svg { width: 17px; height: 17px; fill: white; }
+    .input-footer { display: flex; justify-content: space-between; align-items: center; padding: 7px 3px 0; }
+    .input-footer .hint { font-size: 10.5px; color: var(--muted); }
+    .lang-pill {
+      font-size: 10.5px; color: var(--gold);
+      background: rgba(226,185,111,0.07); border: 1px solid rgba(226,185,111,0.2);
+      padding: 3px 10px; border-radius: 50px;
+    }
+  </style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="app">
+  <header>
+    <div class="header-left">
+      <div class="avatar-wrap">
+        <div class="avatar">SM</div>
+        <div class="status-ring"></div>
+      </div>
+      <div class="header-info">
+        <div class="name">Sir Mean <span>AI Assistant</span></div>
+        <div class="tagline">Sulaiman's Personal AI · Always Available 24/7</div>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge bi">🌍 EN · HU</span>
+      <span class="badge online">● Online</span>
+      <button id="homeBtn" onclick="goHome()" title="Back to Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="chat">
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px">
+          <circle cx="24" cy="16" r="7" stroke="white" stroke-width="2.5" fill="none"/>
+          <circle cx="24" cy="16" r="2.5" fill="white"/>
+          <path d="M10 38c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="10" cy="26" r="2.5" fill="rgba(255,255,255,0.5)"/>
+          <circle cx="38" cy="26" r="2.5" fill="rgba(255,255,255,0.5)"/>
+          <line x1="10" y1="26" x2="10" y2="32" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+          <line x1="38" y1="26" x2="38" y2="32" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2>I'm <em>Sir Mean</em> AI Assistant</h2>
+      <p class="subtitle">Sulaiman's personal AI — you can ask me anything, just like you're chatting with Sulaiman himself.</p>
+      <p class="hausa">Ina nan don taimaka maka — cikin Hausa ko Turanci 🇳🇬</p>
+
+      <div class="topic-grid">
+        <div class="topic-card" onclick="sendSuggestion('Tell me about Sulaiman\'s phone business at Farm Centre')">
+          <span class="topic-icon">📱</span>
+          <div class="topic-title">Phone Business</div>
+          <div class="topic-desc">Buy phones at Farm Centre, Lukoro B</div>
+        </div>
+        <div class="topic-card" onclick="sendSuggestion('I need data analysis help, what does Sulaiman offer?')">
+          <span class="topic-icon">📊</span>
+          <div class="topic-title">Data Analysis</div>
+          <div class="topic-desc">Hire Sulaiman for your data projects</div>
+        </div>
+        <div class="topic-card" onclick="sendSuggestion('What are the latest class activities, assignments or announcements?')">
+          <span class="topic-icon">🎓</span>
+          <div class="topic-title">Class Activities</div>
+          <div class="topic-desc">Assignments, tests & schedule info</div>
+        </div>
+        <div class="topic-card" onclick="sendSuggestion('Ina son sanin wani abu game da Sulaiman da ayyukansa')">
+          <span class="topic-icon">🌍</span>
+          <div class="topic-title">Hausa Support</div>
+          <div class="topic-desc">Zamu iya magana da Hausa</div>
+        </div>
+      </div>
+
+      <div class="divider"><span>ko tambaya komai</span></div>
+      <div class="quick-prompts">
+        <button class="qbtn" onclick="sendSuggestion('Who is Sulaiman?')">Who is Sulaiman?</button>
+        <button class="qbtn" onclick="sendSuggestion('How can I contact Sulaiman?')">Contact Sulaiman</button>
+        <button class="qbtn" onclick="sendSuggestion('Menene kake iya yi min?')">Menene kake iya yi?</button>
+        <button class="qbtn" onclick="sendSuggestion('Help me understand statistics regression')">Statistics Help</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-wrap">
+    <div class="input-row">
+      <textarea id="userInput" rows="1" placeholder="Ask Sir Mean anything… (English or Hausa / Hausa ko Turanci)"></textarea>
+      <button id="sendBtn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="input-footer">
+      <span class="hint">Enter to send · Shift+Enter for new line</span>
+      <span class="lang-pill">🌍 Hausa · English</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const history = [];
+
+  const SYSTEM = `You are Sir Mean AI Assistant — the official personal AI of Sulaiman. You were built to represent Sulaiman and assist anyone who interacts with you.
+
+YOUR IDENTITY
+You always introduce yourself as: I am Sir Mean AI Assistant, Sulaiman's personal assistant. You can ask me anything you want, just like you are chatting with Sulaiman himself.
+You speak on behalf of Sulaiman at all times. You are professional, warm, confident, smart, and always genuinely helpful.
+You are fully bilingual — English and Hausa. If someone writes in Hausa, reply fully in Hausa. If English, reply in English. If mixed, match their tone.
+
+WHO IS SULAIMAN
+Sulaiman is a 200-level Statistics student in the Faculty of Physical Sciences. He is the Class Representative for his department. He is also a skilled Data Analyst and a phone seller. He is a trusted, hardworking, and professional young man.
+
+SULAIMAN'S PHONE BUSINESS
+Sulaiman sells quality phones at Farm Centre, Lukoro B. If someone is interested in buying a phone, let them know they can visit the shop directly at Farm Centre, Lukoro B, or reach Sulaiman through his contacts for available stock and current prices.
+
+SULAIMAN'S DATA ANALYSIS SERVICES
+Sulaiman offers professional data analysis services including data cleaning, statistical analysis, data visualization, report writing, research data analysis, and work with tools like SPSS, Excel, and Python. This is perfect for students working on projects or final year research, and for businesses that need data insights. He is reliable, affordable, and delivers quality work.
+
+CLASS REPRESENTATIVE DUTIES
+Sulaiman is the Class Representative for Statistics Department, 200 Level, Faculty of Physical Sciences. Sir Mean assists classmates with assignment reminders, test and exam schedules, class announcements, and statistics coursework questions covering topics like probability, regression, distributions, and general academic support. If you do not have specific current information such as an exact test date, say: For the most current updates, please check the class group or reach Sulaiman directly.
+
+HOW TO REACH SULAIMAN
+Whenever someone needs to speak directly with Sulaiman, wants more information, or needs something beyond what you can handle, always share his contact details clearly and warmly:
+
+Phone and WhatsApp: 07047985481
+Facebook: Sulaiman Sunusi DA
+TikTok: sulaimansunusi33
+
+Encourage them to call, send a WhatsApp message, or connect on social media. Always present this in a warm and welcoming way.
+
+HAUSA LANGUAGE
+You speak Hausa fluently and naturally. Always respond fully in Hausa when the user writes in Hausa. Common phrases: Yaya zan taimaka maka means How can I help you. Na gode means Thank you. Ba damuwa means No problem. Ina nan don taimaka maka means I am here to help you.
+
+FORMATTING RULES — VERY IMPORTANT
+Never use asterisks, hyphens as bullet points, pound signs, markdown symbols, or any special formatting characters in your responses. Never write things like ** text ** or -- or ## or bullet dashes. Write everything as clean, natural, flowing paragraphs of plain text. Your responses should read like a professional human wrote them — clear, easy to understand, and polished. Use line breaks between paragraphs for readability, but no symbols or markdown of any kind.
+
+STYLE AND TONE
+Be professional but human and friendly. Never be dismissive or rude. Always end your response with something helpful and encouraging. Make every person feel welcome and valued.
+
+You ARE Sir Mean AI Assistant. You represent Sulaiman fully. Be the best assistant anyone has ever used.`;
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 110) + 'px';
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function sendSuggestion(text) { input.value = text; sendMessage(); }
+
+  function goHome() {
+    // Clear chat and restore welcome screen
+    chat.innerHTML = '';
+    history.length = 0;
+    const welcomeHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px">
+          <circle cx="24" cy="16" r="7" stroke="white" stroke-width="2.5" fill="none"/>
+          <circle cx="24" cy="16" r="2.5" fill="white"/>
+          <path d="M10 38c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="10" cy="26" r="2.5" fill="rgba(255,255,255,0.5)"/>
+          <circle cx="38" cy="26" r="2.5" fill="rgba(255,255,255,0.5)"/>
+          <line x1="10" y1="26" x2="10" y2="32" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+          <line x1="38" y1="26" x2="38" y2="32" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2>I'm <em>Sir Mean</em> AI Assistant</h2>
+      <p class="subtitle">Sulaiman's personal AI — you can ask me anything, just like you're chatting with Sulaiman himself.</p>
+      <p class="hausa">Ina nan don taimaka maka — cikin Hausa ko Turanci 🇳🇬</p>
+      <div class="topic-grid">
+        <div class="topic-card" onclick="sendSuggestion('Tell me about Sulaiman\\'s phone business at Farm Centre')">
+          <span class="topic-icon">📱</span>
+          <div class="topic-title">Phone Business</div>
+          <div class="topic-desc">Buy phones at Farm Centre, Lukoro B</div>
+        </div>
+        <div class="topic-card" onclick="sendSuggestion('I need data analysis help, what does Sulaiman offer?')">
+          <span class="topic-icon">📊</span>
+          <div class="topic-title">Data Analysis</div>
+          <div class="topic-desc">Hire Sulaiman for your data projects</div>
+        </div>
+        <div class="topic-card" onclick="sendSuggestion('What are the latest class activities, assignments or announcements?')">
+          <span class="topic-icon">🎓</span>
+          <div class="topic-title">Class Activities</div>
+          <div class="topic-desc">Assignments, tests & schedule info</div>
+        </div>
+        <div class="topic-card" onclick="sendSuggestion('Ina son sanin wani abu game da Sulaiman da ayyukansa')">
+          <span class="topic-icon">🌍</span>
+          <div class="topic-title">Hausa Support</div>
+          <div class="topic-desc">Zamu iya magana da Hausa</div>
+        </div>
+      </div>
+      <div class="divider"><span>ko tambaya komai</span></div>
+      <div class="quick-prompts">
+        <button class="qbtn" onclick="sendSuggestion('Who is Sulaiman?')">Who is Sulaiman?</button>
+        <button class="qbtn" onclick="sendSuggestion('How can I contact Sulaiman?')">Contact Sulaiman</button>
+        <button class="qbtn" onclick="sendSuggestion('Menene kake iya yi min?')">Menene kake iya yi?</button>
+        <button class="qbtn" onclick="sendSuggestion('Help me understand statistics regression')">Statistics Help</button>
+      </div>
+    </div>`;
+    chat.innerHTML = welcomeHTML;
+    document.getElementById('homeBtn').classList.remove('visible');
+  }
+
+  function addMessage(role, text) {
+    const welcome = document.getElementById('welcome');
+    if (welcome) {
+      welcome.remove();
+      document.getElementById('homeBtn').classList.add('visible');
+    }
+    const wrapper = document.createElement('div');
+    wrapper.className = `message ${role}`;
+    const col = document.createElement('div');
+    col.className = 'msg-col';
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.textContent = role === 'assistant' ? 'Sir Mean AI Assistant' : 'You';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    col.appendChild(label);
+    col.appendChild(bubble);
+    const av = document.createElement('div');
+    av.className = 'msg-avatar';
+    av.textContent = role === 'assistant' ? 'SM' : '👤';
+    if (role === 'assistant') { wrapper.appendChild(av); wrapper.appendChild(col); }
+    else { wrapper.appendChild(col); wrapper.appendChild(av); }
+    chat.appendChild(wrapper);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function showTyping() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message assistant';
+    wrapper.id = 'typing-msg';
+    const av = document.createElement('div');
+    av.className = 'msg-avatar';
+    av.textContent = 'SM';
+    const col = document.createElement('div');
+    col.className = 'msg-col';
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.textContent = 'Sir Mean AI Assistant';
+    const tb = document.createElement('div');
+    tb.className = 'typing-bubble';
+    tb.innerHTML = '<span></span><span></span><span></span>';
+    col.appendChild(label);
+    col.appendChild(tb);
+    wrapper.appendChild(av);
+    wrapper.appendChild(col);
+    chat.appendChild(wrapper);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-msg');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text || sendBtn.disabled) return;
+    addMessage('user', text);
+    history.push({ role: 'user', content: text });
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    showTyping();
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: SYSTEM,
+          messages: history
+        })
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "I'm sorry, something went wrong. Please try again.";
+      removeTyping();
+      addMessage('assistant', reply);
+      history.push({ role: 'assistant', content: reply });
+    } catch (err) {
+      removeTyping();
+      addMessage('assistant', "Something went wrong. Please check your connection and try again.\nAn sami matsala — don Allah sake gwadawa. 🙏");
+    }
+    sendBtn.disabled = false;
+    input.focus();
+  }
+</script>
+</body>
+</html>
