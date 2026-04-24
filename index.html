@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sir Mean AI Assistant</title>
+</head>
+
+<body style="font-family: Arial; padding:20px;">
+
+<h2>Sir Mean AI Assistant</h2>
+
+<div id="chat" style="height:300px; overflow:auto; border:1px solid #ccc; padding:10px; margin-bottom:10px;"></div>
+
+<textarea id="userInput" placeholder="Ask anything..." style="width:100%; height:60px;"></textarea>
+<br><br>
+<button onclick="sendMessage()">Send</button>
+
+<!-- TRAIN BUTTON -->
+<button onclick="trainAI()" style="position:fixed;bottom:90px;right:20px;z-index:999;">
+Train AI
+</button>
+
+<script>
+
+/* ================= MEMORY ================= */
+
+const DEFAULT_MEMORY = {
+  name: "Sulaiman Sunusi",
+  education: "Statistics student",
+  level: "200 Level",
+  skills: ["Data Analysis", "SPSS", "Excel", "Python"],
+  business: {
+    type: "Phone selling",
+    location: "Farm Centre, Lukoro B"
+  },
+  goals: [],
+  notes: []
+};
+
+function loadMemory() {
+  const saved = localStorage.getItem("sirMeanMemory");
+  return saved ? JSON.parse(saved) : DEFAULT_MEMORY;
+}
+
+function saveMemory(memory) {
+  localStorage.setItem("sirMeanMemory", JSON.stringify(memory));
+}
+
+/* ================= TRAIN ================= */
+
+function trainAI() {
+  const memory = loadMemory();
+  const info = prompt("Enter new info about yourself:");
+
+  if (!info) return;
+
+  memory.notes.push(info);
+  saveMemory(memory);
+
+  alert("AI trained successfully!");
+}
+
+/* ================= CHAT ================= */
+
+const chat = document.getElementById('chat');
+const input = document.getElementById('userInput');
+const history = [];
+
+function addMessage(role, text) {
+  const div = document.createElement('div');
+  div.innerText = (role === "user" ? "You: " : "AI: ") + text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMessage("user", text);
+  history.push({ role: "user", content: text });
+
+  input.value = "";
+
+  const memory = loadMemory();
+
+  const system = `
+You are Sir Mean AI Assistant.
+
+You know Sulaiman very well.
+
+USER DATA:
+${JSON.stringify(memory)}
+
+Use it naturally in your answers.
+`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 500,
+        system: system,
+        messages: history
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || "Error";
+
+    addMessage("assistant", reply);
+    history.push({ role: "assistant", content: reply });
+
+  } catch (e) {
+    addMessage("assistant", "Connection error.");
+  }
+}
+
+</script>
+
+</body>
+</html>
